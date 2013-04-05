@@ -145,6 +145,11 @@ public class RemoteConnector {
 		}
 	}
 
+	public static String putJSON(String host, String service, String token)
+			throws SecurityException, RemoteException {
+		return putJSON(host, service, null, token);
+	}
+
 	public static String putJSON(String host, String service, String body,
 			String token) throws SecurityException, RemoteException {
 		final HttpResponse resp;
@@ -154,9 +159,11 @@ public class RemoteConnector {
 		put.setHeader(RH_AUTH_TOKEN, token);
 
 		try {
-			StringEntity input = new StringEntity(body);
-			input.setContentType("application/json");
-			put.setEntity(input);
+			if (body != null) {
+				StringEntity input = new StringEntity(body);
+				input.setContentType("application/json");
+				put.setEntity(input);
+			}
 
 			resp = getHttpClient().execute(put);
 			String response = EntityUtils.toString(resp.getEntity());
