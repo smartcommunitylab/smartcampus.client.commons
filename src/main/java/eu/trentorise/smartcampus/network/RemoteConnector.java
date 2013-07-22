@@ -47,7 +47,7 @@ public class RemoteConnector {
 	/** */
 	private static final String RH_ACCEPT = "Accept";
 	/** */
-	private static final String RH_AUTH_TOKEN = "AUTH_TOKEN";
+	private static final String RH_AUTH_TOKEN = "Authorization";
 
 	//
 	/** Timeout (in ms) we specify for each http request */
@@ -76,7 +76,7 @@ public class RemoteConnector {
 			String queryString = generateQueryString(parameters);
 			final HttpGet get = new HttpGet(host + service + queryString);
 			get.setHeader(RH_ACCEPT, "application/json");
-			get.setHeader(RH_AUTH_TOKEN, token);
+			get.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 			resp = getHttpClient().execute(get);
 			String response = EntityUtils.toString(resp.getEntity());
@@ -98,6 +98,14 @@ public class RemoteConnector {
 
 	}
 
+	/**
+	 * @param token
+	 * @return
+	 */
+	private static String bearer(String token) {
+		return "Bearer "+token;
+	}
+
 	public static String postJSON(String host, String service, String body,
 			String token) throws SecurityException, RemoteException {
 		return postJSON(host, service, body, token, null);
@@ -112,7 +120,7 @@ public class RemoteConnector {
 		final HttpPost post = new HttpPost(host + service + queryString);
 
 		post.setHeader(RH_ACCEPT, "application/json");
-		post.setHeader(RH_AUTH_TOKEN, token);
+		post.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 		try {
 			StringEntity input = new StringEntity(body);
@@ -124,7 +132,8 @@ public class RemoteConnector {
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
-			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN || 
+				resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
 				throw new SecurityException();
 			}
 
@@ -156,7 +165,7 @@ public class RemoteConnector {
 		final HttpPut put = new HttpPut(host + service);
 
 		put.setHeader(RH_ACCEPT, "application/json");
-		put.setHeader(RH_AUTH_TOKEN, token);
+		put.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 		try {
 			if (body != null) {
@@ -186,7 +195,7 @@ public class RemoteConnector {
 		final HttpDelete delete = new HttpDelete(host + service);
 
 		delete.setHeader(RH_ACCEPT, "application/json");
-		delete.setHeader(RH_AUTH_TOKEN, token);
+		delete.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 		try {
 			resp = getHttpClient().execute(delete);
