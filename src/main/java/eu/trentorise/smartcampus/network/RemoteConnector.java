@@ -156,13 +156,21 @@ public class RemoteConnector {
 
 	public static String putJSON(String host, String service, String token)
 			throws SecurityException, RemoteException {
-		return putJSON(host, service, null, token);
+		return putJSON(host, service, null, token, null);
+	}
+
+	public static String putJSON(String host, String service, String body, String token)
+			throws SecurityException, RemoteException {
+		return putJSON(host, service, body, token, null);
 	}
 
 	public static String putJSON(String host, String service, String body,
-			String token) throws SecurityException, RemoteException {
+			String token, Map<String, Object> parameters) throws SecurityException, RemoteException {
 		final HttpResponse resp;
-		final HttpPut put = new HttpPut(host + service);
+
+		String queryString = generateQueryString(parameters);
+
+		final HttpPut put = new HttpPut(host + service + queryString);
 
 		put.setHeader(RH_ACCEPT, "application/json");
 		put.setHeader(RH_AUTH_TOKEN, bearer(token));
@@ -228,7 +236,7 @@ public class RemoteConnector {
 					}
 					queryString += param + "=";
 				} else if (value instanceof List) {
-					for (Object v : ((List) value)) {
+					for (Object v : ((List<?>) value)) {
 						if (queryString.length() > 1) {
 							queryString += "&";
 						}
