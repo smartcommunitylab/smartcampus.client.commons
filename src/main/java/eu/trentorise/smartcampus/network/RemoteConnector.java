@@ -17,6 +17,8 @@
 package eu.trentorise.smartcampus.network;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
@@ -196,11 +198,17 @@ public class RemoteConnector {
 			throw new RemoteException(e.getMessage(), e);
 		}
 	}
-
 	public static String deleteJSON(String host, String service, String token)
 			throws SecurityException, RemoteException {
+		return deleteJSON(host, service, token, null);
+	}
+
+	public static String deleteJSON(String host, String service, String token, Map<String,Object> parameters)
+			throws SecurityException, RemoteException {
 		final HttpResponse resp;
-		final HttpDelete delete = new HttpDelete(host + service);
+		String queryString = generateQueryString(parameters);
+
+		final HttpDelete delete = new HttpDelete(host + service + queryString);
 
 		delete.setHeader(RH_ACCEPT, "application/json");
 		delete.setHeader(RH_AUTH_TOKEN, bearer(token));
@@ -240,17 +248,25 @@ public class RemoteConnector {
 						if (queryString.length() > 1) {
 							queryString += "&";
 						}
-						queryString += param + "=" + v.toString();
+						queryString += param + "=" + encodeValue(v.toString());
 					}
 				} else {
 					if (queryString.length() > 1) {
 						queryString += "&";
 					}
-					queryString += param + "=" + value.toString();
+					queryString += param + "=" + encodeValue(value.toString());
 				}
 
 			}
 		}
 		return queryString.length() > 1 ? queryString : "";
+	}
+	
+	private static String encodeValue(String value) {
+		try {
+			return URLEncoder.encode(value, "utf8");
+		} catch (UnsupportedEncodingException e) {
+			return value;
+		}
 	}
 }
