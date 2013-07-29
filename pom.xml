@@ -64,7 +64,6 @@
 				</configuration>
 			</plugin>
 		</plugins>
-		<finalName>smartcampus.client.commons</finalName>
 	</build>
 
 	<repositories>
