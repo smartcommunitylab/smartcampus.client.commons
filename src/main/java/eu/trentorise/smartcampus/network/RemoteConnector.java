@@ -47,15 +47,15 @@ import org.apache.http.util.EntityUtils;
 public class RemoteConnector {
 
 	/** */
-	private static final String RH_ACCEPT = "Accept";
+	protected static final String RH_ACCEPT = "Accept";
 	/** */
-	private static final String RH_AUTH_TOKEN = "Authorization";
+	protected static final String RH_AUTH_TOKEN = "Authorization";
 
 	//
 	/** Timeout (in ms) we specify for each http request */
 	public static int HTTP_REQUEST_TIMEOUT_MS = 30 * 1000;
 
-	private static HttpClient getHttpClient() {
+	protected static HttpClient getHttpClient() {
 		HttpClient httpClient = new DefaultHttpClient();
 		final HttpParams params = httpClient.getParams();
 		HttpConnectionParams.setConnectionTimeout(params,
@@ -104,8 +104,8 @@ public class RemoteConnector {
 	 * @param token
 	 * @return
 	 */
-	private static String bearer(String token) {
-		return "Bearer "+token;
+	protected static String bearer(String token) {
+		return "Bearer " + token;
 	}
 
 	public static String postJSON(String host, String service, String body,
@@ -134,8 +134,8 @@ public class RemoteConnector {
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
-			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN || 
-				resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN
+					|| resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
 				throw new SecurityException();
 			}
 
@@ -161,13 +161,14 @@ public class RemoteConnector {
 		return putJSON(host, service, null, token, null);
 	}
 
-	public static String putJSON(String host, String service, String body, String token)
-			throws SecurityException, RemoteException {
+	public static String putJSON(String host, String service, String body,
+			String token) throws SecurityException, RemoteException {
 		return putJSON(host, service, body, token, null);
 	}
 
 	public static String putJSON(String host, String service, String body,
-			String token, Map<String, Object> parameters) throws SecurityException, RemoteException {
+			String token, Map<String, Object> parameters)
+			throws SecurityException, RemoteException {
 		final HttpResponse resp;
 
 		String queryString = generateQueryString(parameters);
@@ -198,13 +199,15 @@ public class RemoteConnector {
 			throw new RemoteException(e.getMessage(), e);
 		}
 	}
+
 	public static String deleteJSON(String host, String service, String token)
 			throws SecurityException, RemoteException {
 		return deleteJSON(host, service, token, null);
 	}
 
-	public static String deleteJSON(String host, String service, String token, Map<String,Object> parameters)
-			throws SecurityException, RemoteException {
+	public static String deleteJSON(String host, String service, String token,
+			Map<String, Object> parameters) throws SecurityException,
+			RemoteException {
 		final HttpResponse resp;
 		String queryString = generateQueryString(parameters);
 
@@ -233,7 +236,7 @@ public class RemoteConnector {
 		}
 	}
 
-	private static String generateQueryString(Map<String, Object> parameters) {
+	protected static String generateQueryString(Map<String, Object> parameters) {
 		String queryString = "?";
 		if (parameters != null) {
 			for (String param : parameters.keySet()) {
@@ -261,8 +264,8 @@ public class RemoteConnector {
 		}
 		return queryString.length() > 1 ? queryString : "";
 	}
-	
-	private static String encodeValue(String value) {
+
+	protected static String encodeValue(String value) {
 		try {
 			return URLEncoder.encode(value, "utf8");
 		} catch (UnsupportedEncodingException e) {
