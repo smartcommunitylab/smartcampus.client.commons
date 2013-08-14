@@ -85,7 +85,8 @@ public class RemoteConnector {
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
-			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN
+					|| resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
 				throw new SecurityException();
 			}
 			throw new RemoteException("Error validating "
@@ -190,7 +191,8 @@ public class RemoteConnector {
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
-			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN
+					|| resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
 				throw new SecurityException();
 			}
 			throw new RemoteException("Error validating "
@@ -222,7 +224,8 @@ public class RemoteConnector {
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
-			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_FORBIDDEN
+					|| resp.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
 				throw new SecurityException();
 			}
 			throw new RemoteException("Error validating "
