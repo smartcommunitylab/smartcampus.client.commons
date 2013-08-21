@@ -46,6 +46,10 @@ import org.apache.http.util.EntityUtils;
  */
 public class RemoteConnector {
 
+	/**
+	 * 
+	 */
+	private static final String DEFAULT_CHARSET = "UTF-8";
 	/** */
 	protected static final String RH_ACCEPT = "Accept";
 	/** */
@@ -81,7 +85,7 @@ public class RemoteConnector {
 			get.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 			resp = getHttpClient().execute(get);
-			String response = EntityUtils.toString(resp.getEntity());
+			String response = EntityUtils.toString(resp.getEntity(),DEFAULT_CHARSET);
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
@@ -126,12 +130,12 @@ public class RemoteConnector {
 		post.setHeader(RH_AUTH_TOKEN, bearer(token));
 
 		try {
-			StringEntity input = new StringEntity(body);
+			StringEntity input = new StringEntity(body, DEFAULT_CHARSET);
 			input.setContentType("application/json");
 			post.setEntity(input);
 
 			resp = getHttpClient().execute(post);
-			String response = EntityUtils.toString(resp.getEntity());
+			String response = EntityUtils.toString(resp.getEntity(),DEFAULT_CHARSET);
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
@@ -181,13 +185,13 @@ public class RemoteConnector {
 
 		try {
 			if (body != null) {
-				StringEntity input = new StringEntity(body);
+				StringEntity input = new StringEntity(body, DEFAULT_CHARSET);
 				input.setContentType("application/json");
 				put.setEntity(input);
 			}
 
 			resp = getHttpClient().execute(put);
-			String response = EntityUtils.toString(resp.getEntity());
+			String response = EntityUtils.toString(resp.getEntity(),DEFAULT_CHARSET);
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
@@ -220,7 +224,7 @@ public class RemoteConnector {
 
 		try {
 			resp = getHttpClient().execute(delete);
-			String response = EntityUtils.toString(resp.getEntity());
+			String response = EntityUtils.toString(resp.getEntity(),DEFAULT_CHARSET);
 			if (resp.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				return response;
 			}
