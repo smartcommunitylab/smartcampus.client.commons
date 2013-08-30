@@ -16,18 +16,13 @@
 package eu.trentorise.smartcampus.network;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.codehaus.jackson.map.DeserializationConfig;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
+import org.codehaus.jackson.map.introspect.NopAnnotationIntrospector;
+import org.codehaus.jackson.type.TypeReference;
 
 /**
  * @author mirko perillo
@@ -35,117 +30,72 @@ import org.json.JSONObject;
  */
 public class JsonUtils {
 
-	private static final Set<Class> WRAPPER_TYPES = new HashSet<Class>(
-			Arrays.asList(Boolean.class, Character.class, Byte.class,
-					Short.class, Integer.class, Long.class, Float.class,
-					Double.class, Void.class));
 
-	private static boolean isWrapperType(Class clazz) {
-		return WRAPPER_TYPES.contains(clazz);
+    private static ObjectMapper fullMapper = new ObjectMapper();
+    static {
+        fullMapper.setAnnotationIntrospector(NopAnnotationIntrospector.nopInstance());
+        fullMapper.enable(DeserializationConfig.Feature.READ_ENUMS_USING_TO_STRING);
+        fullMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        fullMapper.enable(SerializationConfig.Feature.WRITE_ENUMS_USING_TO_STRING);
+        fullMapper.disable(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS);
+    }
+    
+    /**
+     * Convert an object to object of the specified class
+     * @param object
+     * @param cls target object class
+     * @return converted object
+     */
+    public static <T> T convert(Object object, Class<T> cls) {
+    	return fullMapper.convertValue(object, cls);
+    }
+
+    /**
+     * Convert an object to JSON
+     * @param data
+     * @return JSON representation of the object
+     */
+	public static String toJSON(Object data) {
+		try {
+			return fullMapper.writeValueAsString(data);
+		} catch (Exception e) {
+			return "";
+		}
 	}
 
-	public static String toJson(Object o) {
-		String result = "";
-		if (o == null) {
+	/**
+	 * Convert JSON String to an object of the specified class
+	 * @param body
+	 * @param cls
+	 * @return
+	 */
+	public static <T> T toObject(String body, Class<T> cls) {
+		try {
+			return fullMapper.readValue(body, cls);
+		} catch (Exception e) {
 			return null;
 		}
-		if (o instanceof Collection<?>) {
-			Iterator<?> iter = ((Collection) o).iterator();
-			boolean isFirst = true;
-			result += "[";
-			while (iter.hasNext()) {
-				if (!isFirst) {
-					result += ",";
-				}
-				result += toJson(iter.next());
-				isFirst = false;
+	}
+
+	/**
+	 * Convert JSON array string to the list of objects of the specified class
+	 * @param body
+	 * @param cls
+	 * @return
+	 */
+	public static <T> List<T> toObjectList(String body, Class<T> cls) {
+		try {
+			List<Object> list = fullMapper.readValue(body, new TypeReference<List<?>>() { });
+			List<T> result = new ArrayList<T>();
+			for (Object o : list) {
+				result.add(fullMapper.convertValue(o,cls));
 			}
-			result += "]";
 			return result;
-		}
-		if (o.getClass().isArray()) {
-			boolean isFirst = true;
-			result += "[";
-			for (Object element : (Object[]) o) {
-				if (!isFirst) {
-					result += ",";
-				}
-				result += toJson(element);
-				isFirst = false;
-			}
-			result += "]";
-			return result;
-		}
-		if (o instanceof String) {
-			return JSONObject.quote((String) o);
-		} else if (o.getClass().isPrimitive() || isWrapperType(o.getClass())
-				|| o instanceof String) {
-			return o.toString();
-		} else {
-			try {
-				return (String) o.getClass().getMethod("toJson", o.getClass())
-						.invoke(null, o);
-			} catch (Exception e) {
-				throw new IllegalArgumentException(o.getClass().getName()
-						+ " MUST declare toJson method");
-			}
+		} catch (Exception e) {
+			return null;
 		}
 	}
-	
-	 public static Object toJSON(Object object) throws JSONException {
-	        if (object instanceof Map) {
-	            JSONObject json = new JSONObject();
-	            Map map = (Map) object;
-	            for (Object key : map.keySet()) {
-	                json.put(key.toString(), toJSON(map.get(key)));
-	            }
-	            return json;
-	        } else if (object instanceof Iterable) {
-	            JSONArray json = new JSONArray();
-	            for (Object value : ((Iterable)object)) {
-	                json.put(value);
-	            }
-	            return json;
-	        } else {
-	            return object;
-	        }
-	    }
 
-	    public static boolean isEmptyObject(JSONObject object) {
-	        return object.names() == null;
-	    }
 
-	    public static Map<String, Object> getMap(JSONObject object, String key) throws JSONException {
-	        return toMap(object.getJSONObject(key));
-	    }
-
-	    public static Map<String, Object> toMap(JSONObject object) throws JSONException {
-	        Map<String, Object> map = new HashMap();
-	        Iterator keys = object.keys();
-	        while (keys.hasNext()) {
-	            String key = (String) keys.next();
-	            map.put(key, fromJson(object.get(key)));
-	        }
-	        return map;
-	    }
-
-	    public static List toList(JSONArray array) throws JSONException {
-	        List list = new ArrayList();
-	        for (int i = 0; i < array.length(); i++) {
-	            list.add(fromJson(array.get(i)));
-	        }
-	        return list;
-	    }
-
-	    private static Object fromJson(Object json) throws JSONException {
-	        if (json == JSONObject.NULL) {
-	            return null;
-	        } else if (json instanceof JSONObject) {
-	            return toMap((JSONObject) json);
-	        } else if (json instanceof JSONArray) {
-	            return toList((JSONArray) json);
-	        } else {
-	            return json;
-	        }
-	    }
 }
