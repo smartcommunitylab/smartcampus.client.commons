@@ -18,9 +18,23 @@ package eu.trentorise.smartcampus.network;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.Socket;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -31,9 +45,18 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.params.ConnManagerParams;
+import org.apache.http.conn.scheme.PlainSocketFactory;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.AbstractVerifier;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
@@ -46,6 +69,15 @@ import org.apache.http.util.EntityUtils;
  */
 public class RemoteConnector {
 
+	/**
+	 * {@link HttpClient} certificate verifier type. Use with caution.
+	 * @author raman
+	 *
+	 */
+	public enum CLIENT_TYPE {CLIENT_NORMAL, CLIENT_WILDCARD, CLIENT_ACCEPTALL};
+	
+	private static CLIENT_TYPE clientType = CLIENT_TYPE.CLIENT_NORMAL;
+	
 	/**
 	 * 
 	 */
@@ -60,15 +92,33 @@ public class RemoteConnector {
 	public static int HTTP_REQUEST_TIMEOUT_MS = 30 * 1000;
 
 	protected static HttpClient getHttpClient() {
-		HttpClient httpClient = new DefaultHttpClient();
+		HttpClient httpClient = null;
+		switch (clientType) {
+		case CLIENT_WILDCARD:
+			httpClient = getWildcartHttpClient(null);
+			break;
+		case CLIENT_ACCEPTALL:
+			httpClient = getAcceptAllHttpClient(null);
+			break;
+		default:
+			httpClient = getDefaultHttpClient(null);
+		}
+		
 		final HttpParams params = httpClient.getParams();
-		HttpConnectionParams.setConnectionTimeout(params,
-				HTTP_REQUEST_TIMEOUT_MS);
+		HttpConnectionParams.setConnectionTimeout(params, HTTP_REQUEST_TIMEOUT_MS);
 		HttpConnectionParams.setSoTimeout(params, HTTP_REQUEST_TIMEOUT_MS);
 		ConnManagerParams.setTimeout(params, HTTP_REQUEST_TIMEOUT_MS);
 		return httpClient;
 	}
 
+	/**
+	 * Set the way the SSL certificates are managed for the HTTP calls. 
+	 * @param type
+	 */
+	public static void setClientType(CLIENT_TYPE type) {
+		clientType = type;
+	}
+	
 	public static String getJSON(String host, String service, String token)
 			throws SecurityException, RemoteException {
 		return getJSON(host, service, token, null);
@@ -279,4 +329,136 @@ public class RemoteConnector {
 			return value;
 		}
 	}
+	
+	private static HttpClient getDefaultHttpClient(HttpParams inParams) {
+		if (inParams != null) {
+			return new DefaultHttpClient(inParams);
+		} else {
+			return new DefaultHttpClient();
+		}
+	}
+
+	private static HttpClient getAcceptAllHttpClient(HttpParams inParams) {
+		HttpClient client = null;
+
+		HttpParams params = inParams != null ? inParams : new BasicHttpParams();
+
+		try {
+			KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+			trustStore.load(null, null);
+
+			SchemeRegistry registry = new SchemeRegistry();
+			registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+
+			// IMPORTANT: use CustolSSLSocketFactory for 2.2
+			SSLSocketFactory sslSocketFactory = new CustomSSLSocketFactory(trustStore);
+			sslSocketFactory.setHostnameVerifier(SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+			registry.register(new Scheme("https", sslSocketFactory, 443));
+
+			ClientConnectionManager ccm = new ThreadSafeClientConnManager(params, registry);
+
+			client = new DefaultHttpClient(ccm, params);
+		} catch (Exception e) {
+			client = new DefaultHttpClient(params);
+		}
+
+		return client;
+	}
+
+	private static HttpClient getWildcartHttpClient(HttpParams inParams) {
+		HttpClient client = null;
+
+		HttpParams params = inParams != null ? inParams : new BasicHttpParams();
+
+		try {
+			KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+			trustStore.load(null, null);
+
+			SchemeRegistry registry = new SchemeRegistry();
+			registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+
+			SSLSocketFactory sslSocketFactory = new CustomSSLSocketFactory(trustStore);
+			final X509HostnameVerifier delegate = sslSocketFactory.getHostnameVerifier();
+			if (!(delegate instanceof WildcardVerifier)) {
+				sslSocketFactory.setHostnameVerifier(new WildcardVerifier(delegate));
+			}
+			registry.register(new Scheme("https", sslSocketFactory, 443));
+
+			ClientConnectionManager ccm = new ThreadSafeClientConnManager(params, registry);
+
+			client = new DefaultHttpClient(ccm, params);
+		} catch (Exception e) {
+			client = new DefaultHttpClient(params);
+		}
+
+		return client;
+	}
+
+	/*
+	 * Custom classes
+	 */
+	private static class WildcardVerifier extends AbstractVerifier {
+		private final X509HostnameVerifier delegate;
+
+		public WildcardVerifier(final X509HostnameVerifier delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public void verify(String host, String[] cns, String[] subjectAlts) throws SSLException {
+			boolean ok = false;
+			try {
+				delegate.verify(host, cns, subjectAlts);
+			} catch (SSLException e) {
+				for (String cn : cns) {
+					if (cn.startsWith("*.")) {
+						try {
+							delegate.verify(host, new String[] { cn.substring(2) }, subjectAlts);
+							ok = true;
+						} catch (Exception e1) {
+							throw new SSLException(e1);
+						}
+					}
+				}
+				if (!ok) {
+					throw e;
+				}
+			}
+		}
+	}
+
+	private static class CustomSSLSocketFactory extends SSLSocketFactory {
+		SSLContext sslContext = SSLContext.getInstance("TLS");
+
+		public CustomSSLSocketFactory(KeyStore truststore) throws NoSuchAlgorithmException, KeyManagementException,
+				KeyStoreException, UnrecoverableKeyException {
+			super(truststore);
+
+			TrustManager tm = new X509TrustManager() {
+				public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				}
+
+				public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				}
+
+				public X509Certificate[] getAcceptedIssuers() {
+					return null;
+				}
+			};
+
+			sslContext.init(null, new TrustManager[] { tm }, null);
+		}
+
+		@Override
+		public Socket createSocket(Socket socket, String host, int port, boolean autoClose) throws IOException,
+				UnknownHostException {
+			return sslContext.getSocketFactory().createSocket(socket, host, port, autoClose);
+		}
+
+		@Override
+		public Socket createSocket() throws IOException {
+			return sslContext.getSocketFactory().createSocket();
+		}
+	}
+
 }
