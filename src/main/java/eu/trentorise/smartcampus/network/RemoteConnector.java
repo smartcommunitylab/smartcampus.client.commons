@@ -18,7 +18,11 @@ package eu.trentorise.smartcampus.network;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
@@ -130,7 +134,7 @@ public class RemoteConnector {
 
 		try {
 			String queryString = generateQueryString(parameters);
-			final HttpGet get = new HttpGet(host + service + queryString);
+			final HttpGet get = new HttpGet(normalizeURL(host + service) + queryString);
 			get.setHeader(RH_ACCEPT, "application/json");
 			get.setHeader(RH_AUTH_TOKEN, bearer(token));
 
@@ -174,7 +178,7 @@ public class RemoteConnector {
 
 		String queryString = generateQueryString(parameters);
 		final HttpResponse resp;
-		final HttpPost post = new HttpPost(host + service + queryString);
+		final HttpPost post = new HttpPost(normalizeURL(host + service) + queryString);
 
 		post.setHeader(RH_ACCEPT, "application/json");
 		post.setHeader(RH_AUTH_TOKEN, bearer(token));
@@ -227,8 +231,9 @@ public class RemoteConnector {
 		final HttpResponse resp;
 
 		String queryString = generateQueryString(parameters);
+		String uriString = normalizeURL(host + service) + queryString;
 
-		final HttpPut put = new HttpPut(host + service + queryString);
+		final HttpPut put = new HttpPut(uriString);
 
 		put.setHeader(RH_ACCEPT, "application/json");
 		put.setHeader(RH_AUTH_TOKEN, bearer(token));
@@ -256,6 +261,17 @@ public class RemoteConnector {
 		}
 	}
 
+	private static String normalizeURL(String uriString) throws RemoteException {
+		try {
+			URL url = new URL(uriString);
+			URI uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url.getPort(), url.getPath(), url.getQuery(), url.getRef());
+			uriString = uri.toURL().toString();
+		} catch (Exception e) {
+			throw new RemoteException(e.getMessage());
+		}
+		return uriString;
+	}
+
 	public static String deleteJSON(String host, String service, String token)
 			throws SecurityException, RemoteException {
 		return deleteJSON(host, service, token, null);
@@ -267,7 +283,7 @@ public class RemoteConnector {
 		final HttpResponse resp;
 		String queryString = generateQueryString(parameters);
 
-		final HttpDelete delete = new HttpDelete(host + service + queryString);
+		final HttpDelete delete = new HttpDelete(normalizeURL(host + service) + queryString);
 
 		delete.setHeader(RH_ACCEPT, "application/json");
 		delete.setHeader(RH_AUTH_TOKEN, bearer(token));
