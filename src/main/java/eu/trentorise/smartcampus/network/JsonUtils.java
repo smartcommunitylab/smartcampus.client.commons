@@ -15,13 +15,10 @@
  ******************************************************************************/
 package eu.trentorise.smartcampus.network;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.introspect.NopAnnotationIntrospector;
@@ -84,23 +81,6 @@ public class JsonUtils {
 		try {
 			return fullMapper.readValue(body, cls);
 		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	/**
-	 * Convert object to JSON string
-	 * 
-	 */
-
-	public static String convert(Object object) {
-		try {
-			return fullMapper.writeValueAsString(object);
-		} catch (JsonGenerationException e) {
-			return null;
-		} catch (JsonMappingException e) {
-			return null;
-		} catch (IOException e) {
 			return null;
 		}
 	}
